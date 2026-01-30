@@ -51,8 +51,8 @@ const PRODUCTS_TABLE: Record<
 };
 
 const UNITS = [
-  { code: "0001", name: "Matriz" },
-  { code: "0002", name: "Filial 01" },
+  { code: "0001", name: "Disbec São Miguel" },
+  { code: "0002", name: "Disbec Penedo" },
   { code: "0003", name: "Filial 02" },
   { code: "0004", name: "Filial 03" },
   { code: "0005", name: "Filial 04" },
