@@ -44,21 +44,21 @@ import {
   Loader2,
 } from "lucide-react";
 
-// Tabela fixa de produtos com conversão de pallet/lastro para caixa
+// Tabela fixa de produtos com conversão de pallet/lastro para caixa e caixa para inteiras
 const PRODUCTS_TABLE: Record<
   string,
-  { name: string; palletToCaixas: number; lastroToCaixas: number }
+  { name: string; palletToCaixas: number; lastroToCaixas: number; caixaToInteiras: number }
 > = {
-  "0000001": { name: "Arroz Branco 5kg", palletToCaixas: 80, lastroToCaixas: 8 },
-  "0000002": { name: "Feijão Preto 1kg", palletToCaixas: 100, lastroToCaixas: 10 },
-  "0000003": { name: "Açúcar Cristal 5kg", palletToCaixas: 72, lastroToCaixas: 6 },
-  "0000004": { name: "Óleo de Soja 900ml", palletToCaixas: 120, lastroToCaixas: 12 },
-  "0000005": { name: "Farinha de Trigo 1kg", palletToCaixas: 90, lastroToCaixas: 9 },
-  "0000006": { name: "Macarrão Espaguete 500g", palletToCaixas: 150, lastroToCaixas: 15 },
-  "0000007": { name: "Sal Refinado 1kg", palletToCaixas: 84, lastroToCaixas: 7 },
-  "0000008": { name: "Leite UHT 1L", palletToCaixas: 108, lastroToCaixas: 12 },
-  "0000009": { name: "Café Torrado 500g", palletToCaixas: 60, lastroToCaixas: 6 },
-  "0000010": { name: "Biscoito Cream Cracker 400g", palletToCaixas: 96, lastroToCaixas: 8 },
+  "0000001": { name: "Arroz Branco 5kg", palletToCaixas: 80, lastroToCaixas: 8, caixaToInteiras: 6 },
+  "0000002": { name: "Feijão Preto 1kg", palletToCaixas: 100, lastroToCaixas: 10, caixaToInteiras: 12 },
+  "0000003": { name: "Açúcar Cristal 5kg", palletToCaixas: 72, lastroToCaixas: 6, caixaToInteiras: 6 },
+  "0000004": { name: "Óleo de Soja 900ml", palletToCaixas: 120, lastroToCaixas: 12, caixaToInteiras: 20 },
+  "0000005": { name: "Farinha de Trigo 1kg", palletToCaixas: 90, lastroToCaixas: 9, caixaToInteiras: 10 },
+  "0000006": { name: "Macarrão Espaguete 500g", palletToCaixas: 150, lastroToCaixas: 15, caixaToInteiras: 24 },
+  "0000007": { name: "Sal Refinado 1kg", palletToCaixas: 84, lastroToCaixas: 7, caixaToInteiras: 12 },
+  "0000008": { name: "Leite UHT 1L", palletToCaixas: 108, lastroToCaixas: 12, caixaToInteiras: 12 },
+  "0000009": { name: "Café Torrado 500g", palletToCaixas: 60, lastroToCaixas: 6, caixaToInteiras: 10 },
+  "0000010": { name: "Biscoito Cream Cracker 400g", palletToCaixas: 96, lastroToCaixas: 8, caixaToInteiras: 18 },
 };
 
 const UNITS = [
@@ -187,9 +187,13 @@ export function StockCount() {
     const product = PRODUCTS_TABLE[item.itemCode];
     if (!product) return item.caixa;
 
+    // Converte pallet e lastro para caixas
     const caixasFromPallet = item.pallet * product.palletToCaixas;
     const caixasFromLastro = item.lastro * product.lastroToCaixas;
-    return caixasFromPallet + caixasFromLastro + item.caixa;
+    const totalCaixas = caixasFromPallet + caixasFromLastro + item.caixa;
+    
+    // Converte total de caixas para inteiras usando o fator do produto
+    return totalCaixas * product.caixaToInteiras;
   };
 
   const generateCSVContent = () => {
