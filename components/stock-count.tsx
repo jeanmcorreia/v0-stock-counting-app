@@ -31,7 +31,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Download, RefreshCcw, Plus, Package, Settings, ClipboardList } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Download,
+  RefreshCcw,
+  Plus,
+  Package,
+  Settings,
+  ClipboardList,
+  FolderUp,
+  Loader2,
+} from "lucide-react";
 
 // Tabela fixa de produtos com conversão de pallet/lastro para caixa
 const PRODUCTS_TABLE: Record<
@@ -97,6 +108,7 @@ export function StockCount() {
 
   const [items, setItems] = useState<CountItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const productName = useMemo(() => {
     const code = currentItem.itemCode.padStart(7, "0");
@@ -170,7 +182,8 @@ export function StockCount() {
     setEditingId(null);
   };
 
-  const calculateTotalCaixas = (item: CountItem): number => {
+  // Calcula o total de inteiras (pallet + lastro + caixa convertidos para inteiras)
+  const calculateTotalInteiras = (item: CountItem): number => {
     const product = PRODUCTS_TABLE[item.itemCode];
     if (!product) return item.caixa;
 
@@ -179,27 +192,35 @@ export function StockCount() {
     return caixasFromPallet + caixasFromLastro + item.caixa;
   };
 
+  const generateCSVContent = () => {
+    const lines = items.map((item) => {
+      const warehouseCode = padLeft(config.warehouse, 2);
+      const depositCode = padLeft(config.deposit, 2);
+      const itemCode = padLeft(item.itemCode, 7);
+      const totalInteiras = calculateTotalInteiras(item);
+      const quantidadeInteira = padLeft(totalInteiras, 7);
+      const quantidadeAvulsa = padLeft(item.unidadeAvulsa, 2);
+
+      return `${warehouseCode};${depositCode};${itemCode};${quantidadeInteira};${quantidadeAvulsa}`;
+    });
+
+    return lines.join("\n");
+  };
+
+  const getFileName = () => {
+    const unitCode = config.unit;
+    const dateFormatted = config.date.split("-").reverse().join("");
+    return `CONTAGEM_ESTOQUE_${unitCode}_${dateFormatted}.csv`;
+  };
+
   const handleExportCSV = () => {
     if (items.length === 0) {
       alert("Nenhum item para exportar!");
       return;
     }
 
-    const lines = items.map((item) => {
-      const warehouseCode = padLeft(config.warehouse, 2);
-      const depositCode = padLeft(config.deposit, 2);
-      const itemCode = padLeft(item.itemCode, 7);
-      const totalCaixas = calculateTotalCaixas(item);
-      const quantidadeInteira = padLeft(totalCaixas, 7);
-      const quantidadeAvulsa = padLeft(item.unidadeAvulsa, 2);
-
-      return `${warehouseCode};${depositCode};${itemCode};${quantidadeInteira};${quantidadeAvulsa}`;
-    });
-
-    const csvContent = lines.join("\n");
-    const unitCode = config.unit;
-    const dateFormatted = config.date.split("-").reverse().join("");
-    const fileName = `CONTAGEM_ESTOQUE_${unitCode}_${dateFormatted}.csv`;
+    const csvContent = generateCSVContent();
+    const fileName = getFileName();
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -212,8 +233,45 @@ export function StockCount() {
     document.body.removeChild(link);
   };
 
+  const handleSendToSharedFolder = async () => {
+    if (items.length === 0) {
+      alert("Nenhum item para enviar!");
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const csvContent = generateCSVContent();
+      const fileName = getFileName();
+
+      const response = await fetch("/api/send-csv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName,
+          content: csvContent,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`Arquivo ${fileName} enviado com sucesso para a pasta compartilhada!`);
+      } else {
+        alert(`Erro ao enviar arquivo: ${result.error || "Erro desconhecido"}`);
+      }
+    } catch (error) {
+      alert("Erro ao enviar arquivo para a pasta compartilhada. Verifique a conexão.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const totalItems = items.length;
-  const totalCaixasGeral = items.reduce((acc, item) => acc + calculateTotalCaixas(item), 0);
+  const totalInteirasGeral = items.reduce((acc, item) => acc + calculateTotalInteiras(item), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -489,6 +547,19 @@ export function StockCount() {
                       <Download className="mr-2 h-4 w-4" />
                       Exportar CSV
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleSendToSharedFolder}
+                      disabled={items.length === 0 || isSending}
+                    >
+                      {isSending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FolderUp className="mr-2 h-4 w-4" />
+                      )}
+                      {isSending ? "Enviando..." : "Enviar para Pasta"}
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -518,7 +589,7 @@ export function StockCount() {
                               <TableHead className="text-center font-semibold">Lastro</TableHead>
                               <TableHead className="text-center font-semibold">Caixa</TableHead>
                               <TableHead className="text-center font-semibold">Avulsa</TableHead>
-                              <TableHead className="text-center font-semibold">Total Cx</TableHead>
+                              <TableHead className="text-center font-semibold">Total Int.</TableHead>
                               <TableHead className="text-right font-semibold">Ações</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -536,7 +607,7 @@ export function StockCount() {
                                 <TableCell className="text-center">{item.caixa}</TableCell>
                                 <TableCell className="text-center">{item.unidadeAvulsa}</TableCell>
                                 <TableCell className="text-center font-semibold text-primary">
-                                  {calculateTotalCaixas(item)}
+                                  {calculateTotalInteiras(item)}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-1">
@@ -588,8 +659,8 @@ export function StockCount() {
                     </div>
                     <div className="mt-4 flex justify-end">
                       <div className="rounded-lg bg-muted px-4 py-2">
-                        <span className="text-sm text-muted-foreground">Total de Caixas: </span>
-                        <span className="font-semibold text-foreground">{totalCaixasGeral}</span>
+                        <span className="text-sm text-muted-foreground">Total de Inteiras: </span>
+                        <span className="font-semibold text-foreground">{totalInteirasGeral}</span>
                       </div>
                     </div>
                   </>
