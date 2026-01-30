@@ -49,7 +49,7 @@ const PRODUCTS_TABLE: Record<
   string,
   { name: string; palletToInteiras: number; lastroToInteiras: number; caixaToInteiras: number }
 > = {
-  "0000001": { name: "Arroz Branco 5kg", palletToInteiras: 480, lastroToInteiras: 48, caixaToInteiras: 6 },
+  "0000982": { name: "SKOL 1/1", palletToInteiras: 84, lastroToInteiras: 14, caixaToInteiras: 2 },
   "0000002": { name: "Feijão Preto 1kg", palletToInteiras: 1200, lastroToInteiras: 120, caixaToInteiras: 12 },
   "0000003": { name: "Açúcar Cristal 5kg", palletToInteiras: 432, lastroToInteiras: 36, caixaToInteiras: 6 },
   "0000004": { name: "Óleo de Soja 900ml", palletToInteiras: 2400, lastroToInteiras: 240, caixaToInteiras: 20 },
